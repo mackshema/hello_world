@@ -34,11 +34,11 @@ async def run_turn_with_retry(runner, session_id, message, state: RunState, max_
         try:
             return await run_turn(runner, session_id, message, state)
         except Exception as e:
-            err_str = str(e)
-            if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+            err_str = repr(e)
+            if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower() or "limit" in err_str.lower():
                 # Parse suggested retry delay or default to 60s
                 delay = 60.0
-                match = re.search(r"Please retry in (\d+\.?\d*)s", err_str)
+                match = re.search(r"retry in (\d+\.?\d*)s", err_str) or re.search(r"retryDelay':\s*'(\d+)", err_str)
                 if match:
                     delay = float(match.group(1)) + 1.5  # Add 1.5s buffer
                 
