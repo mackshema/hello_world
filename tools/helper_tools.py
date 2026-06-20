@@ -19,7 +19,7 @@ from state import RunState
 def make_helper_tools(state: RunState):
     """Returns [web_search, calculate, run_python] tool functions."""
 
-    # ── Web Search ─────────────────────────────────────────────────────────────
+    # -- Web Search -------------------------------------------------------------
     async def web_search(query: str) -> str:
         """Search the internet for current facts, documentation, and answers.
 
@@ -79,7 +79,7 @@ def make_helper_tools(state: RunState):
         state.estimate_and_record_tokens(output, is_input=False, phase="research")
         return output
 
-    # ── Safe Math Evaluator ───────────────────────────────────────────────────
+    # -- Safe Math Evaluator ---------------------------------------------------
     _ops = {
         ast.Add:  op.add,  ast.Sub:  op.sub,  ast.Mult: op.mul,
         ast.Div:  op.truediv, ast.Pow: op.pow, ast.Mod: op.mod,
@@ -124,7 +124,7 @@ def make_helper_tools(state: RunState):
         state.estimate_and_record_tokens(result, is_input=False, phase="solve")
         return result
 
-    # ── Python Sandbox Runner ─────────────────────────────────────────────────
+    # -- Python Sandbox Runner -------------------------------------------------
     async def run_python(code: str) -> str:
         """Execute Python code in a subprocess sandbox and return stdout + stderr.
         MANDATORY for all CODING tasks. Never submit code that hasn't been run here.

@@ -77,7 +77,7 @@ async def critique_solution(
     weakness_m = re.search(r"BIGGEST_WEAKNESS:\s*(.+)", raw, re.IGNORECASE)
     weakness   = weakness_m.group(1).strip() if weakness_m else ""
 
-    icon = "⚠" if fixes_needed else "✓"
+    icon = "[!]" if fixes_needed else "[OK]"
     print(f"  [Critic] {icon} Fixes needed: {fixes_needed} | Issues: {len(issues)}")
     if fixes_needed and weakness:
         print(f"  [Critic] Biggest weakness: {weakness}")

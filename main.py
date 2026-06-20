@@ -1,13 +1,19 @@
 """
 main.py — Arena Champion Agent Orchestrator
 Multi-agent 6-phase workflow:
-  Phase 1+2 → Planner  (flash-lite + flash)
-  Phase 3   → Researcher (no LLM, just search APIs)
-  Phase 4   → Solver   (gemini-2.5-pro, with tools)
-  Phase 5   → Critic   (flash, ≤2 loops)
-  Phase 6   → Judge    (flash, ≤2 loops)
-  Submit    → submit_task()
+  Phase 1+2 -> Planner  (flash-lite + flash)
+  Phase 3   -> Researcher (no LLM, just search APIs)
+  Phase 4   -> Solver   (gemini-2.5-pro, with tools)
+  Phase 5   -> Critic   (flash, ≤2 loops)
+  Phase 6   -> Judge    (flash, ≤2 loops)
+  Submit    -> submit_task()
 """
+import sys, io
+# Force UTF-8 output on Windows to avoid charmap codec errors
+if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 import asyncio
 import json
 import re
@@ -25,7 +31,7 @@ from agents.critic     import critique_solution
 from agents.judge      import judge_solution
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# -- Helpers ------------------------------------------------------------------
 
 async def with_retry(coro_fn, max_retries: int = 5, label: str = ""):
     """Wrap an async callable with rate-limit retry logic."""
@@ -48,7 +54,7 @@ async def with_retry(coro_fn, max_retries: int = 5, label: str = ""):
     raise RuntimeError(f"{label}: Failed after {max_retries} retries due to rate limits.")
 
 
-# ── Task Solver Pipeline ──────────────────────────────────────────────────────
+# -- Task Solver Pipeline ------------------------------------------------------
 
 async def run_task_pipeline(
     task_data: dict,
@@ -73,13 +79,13 @@ async def run_task_pipeline(
     print(f"  Level: {level} | ID: {task_id}")
     print(f"{'='*60}")
 
-    # ── Phase 1+2: Plan ───────────────────────────────────────────────────────
+    # -- Phase 1+2: Plan -------------------------------------------------------
     plan_result = await with_retry(
         lambda: plan_task(description, state),
         label="Planner"
     )
 
-    # ── Phase 3: Research (conditional) ───────────────────────────────────────
+    # -- Phase 3: Research (conditional) ---------------------------------------
     research_facts = "RESEARCH_FACTS: none"
     if plan_result.research_required:
         print("\n  [Phase 3] Research required — running search...")
@@ -87,7 +93,7 @@ async def run_task_pipeline(
     else:
         print("\n  [Phase 3] Skipped — no research required.")
 
-    # ── Recall memory context ─────────────────────────────────────────────────
+    # -- Recall memory context -------------------------------------------------
     past = memory.recall_similar(title, plan_result.task_type, top_k=2)
     memory_context = ""
     if past:
@@ -99,13 +105,13 @@ async def run_task_pipeline(
             )
         memory_context = "\n".join(lines)
 
-    # ── Phase 4+5+6: Solve → Critique → Judge loop ───────────────────────────
+    # -- Phase 4+5+6: Solve -> Critique -> Judge loop ---------------------------
     session_id = f"{state.run_id}_task{task_idx}"
     solution   = ""
     max_loops  = 2
 
     for loop in range(1, max_loops + 1):
-        print(f"\n  ── Loop {loop}/{max_loops} ──────────────────────────────")
+        print(f"\n  -- Loop {loop}/{max_loops} ------------------------------")
 
         # Phase 4: Solve
         solution = await with_retry(
@@ -136,7 +142,7 @@ async def run_task_pipeline(
         print(f"\n  Confidence: {judgment.score}/100 | Fixes needed: {critique.fixes_needed}")
 
         if judgment.should_submit:
-            print(f"  ✓ Score {judgment.score} ≥ 85 — submitting.")
+            print(f"  [OK] Score {judgment.score} ≥ 85 — submitting.")
             break
 
         if loop == max_loops:
@@ -144,7 +150,7 @@ async def run_task_pipeline(
             break
 
         if critique.fixes_needed:
-            print(f"  ↻ Fixing: {critique.weakness or 'general improvements'}...")
+            print(f"  [retry] Fixing: {critique.weakness or 'general improvements'}...")
             # Augment memory context with critique feedback for the next loop
             memory_context += (
                 f"\n\nPREVIOUS ATTEMPT (score ~{judgment.score}):\n"
@@ -152,7 +158,7 @@ async def run_task_pipeline(
                 f"ISSUE TO FIX: {critique.weakness}"
             )
 
-    # ── Submit ────────────────────────────────────────────────────────────────
+    # -- Submit ----------------------------------------------------------------
     print(f"\n  [Submit] Submitting solution ({len(solution)} chars)...")
     submit_result = await with_retry(
         lambda s=solution: submit_task(state.agent_id, task_id, s),
@@ -173,7 +179,7 @@ async def run_task_pipeline(
     return True
 
 
-# ── Main Loop ─────────────────────────────────────────────────────────────────
+# -- Main Loop -----------------------------------------------------------------
 
 async def main():
     config.validate_config(exit_on_failure=True)
@@ -194,7 +200,7 @@ async def main():
     arena_tools = make_arena_tools(state)
     register_agent, get_tasks, submit_task, skip_task = arena_tools
 
-    # ── Register ──────────────────────────────────────────────────────────────
+    # -- Register --------------------------------------------------------------
     print("--- [Step 1] Registering Agent ---")
     reg_result = await with_retry(
         lambda: register_agent(config.AGENT_NAME, config.AGENT_STACK),
@@ -206,7 +212,7 @@ async def main():
         print("ERROR: Registration failed. Cannot proceed.", file=sys.stderr)
         sys.exit(1)
 
-    # ── Task Loop ─────────────────────────────────────────────────────────────
+    # -- Task Loop -------------------------------------------------------------
     task_count = 0
     while task_count < config.MAX_TURNS:
         task_count += 1
@@ -217,22 +223,32 @@ async def main():
             label="GetTasks"
         )
 
-        # Parse task JSON
+        # Parse task JSON — Arena returns either a list [...] or a single dict {...}
         task_data = {}
         try:
-            task_data = json.loads(tasks_result)
+            parsed = json.loads(tasks_result)
+            if isinstance(parsed, list):
+                # Pick the first task in the list
+                if parsed:
+                    task_data = parsed[0]
+                else:
+                    print("  [Main] Task list is empty. Waiting 15s...")
+                    await asyncio.sleep(15)
+                    continue
+            elif isinstance(parsed, dict):
+                task_data = parsed
         except Exception:
-            # Some responses are plain text with key=value pairs
             print(f"  [Main] Non-JSON response: {tasks_result[:300]}")
             if "no task" in tasks_result.lower() or "error" in tasks_result.lower():
                 print("  No active task available. Waiting 10s...")
                 await asyncio.sleep(10)
                 continue
 
-        if not task_data.get("id"):
+        if not task_data or not task_data.get("id"):
             print("  No task ID in response. Waiting 15s...")
             await asyncio.sleep(15)
             continue
+
 
         # Run the 6-phase pipeline
         submitted = await run_task_pipeline(
@@ -242,7 +258,7 @@ async def main():
         if submitted:
             await asyncio.sleep(3)   # brief pause between tasks
 
-    # ── Final Summary ─────────────────────────────────────────────────────────
+    # -- Final Summary ---------------------------------------------------------
     print("\n" + "="*60)
     print("  Arena Champion Agent — Session Complete")
     print(f"  Tasks Attempted: {state.tasks_attempted}")

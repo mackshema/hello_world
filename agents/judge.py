@@ -74,7 +74,7 @@ async def judge_solution(
     axis_m   = re.search(r"WEAKEST_AXIS:\s*(Completeness|Accuracy|Clarity|Correctness)", raw, re.IGNORECASE)
     axis     = axis_m.group(1) if axis_m else "Completeness"
 
-    icon = "✓" if score >= 85 else "↻"
+    icon = "[OK]" if score >= 85 else "[retry]"
     print(f"  [Judge] {icon} Score: {score}/100 | Reason: {reason}")
 
     return JudgeResult(score, reason, axis)

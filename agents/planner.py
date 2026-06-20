@@ -78,7 +78,7 @@ async def plan_task(task_description: str, state: RunState) -> PlanResult:
     state.estimate_and_record_tokens(raw, is_input=False,
                                      model=config.MODEL_CLASSIFY, phase="classify")
 
-    # ── Parse output ──────────────────────────────────────────────────────────
+    # -- Parse output ----------------------------------------------------------
     task_type_m = re.search(r"TASK_TYPE:\s*(\w[\w\-]*)", raw, re.IGNORECASE)
     task_type   = (task_type_m.group(1).upper() if task_type_m else "ANALYSIS")
 

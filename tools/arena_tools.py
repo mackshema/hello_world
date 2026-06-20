@@ -50,12 +50,31 @@ def make_arena_tools(state: RunState):
         result = await mcp_call("register_agent",
             {"idToken": config.ARENA_ID_TOKEN, "name": name, "stack": stack}, state)
 
-        m = re.search(r"AGENT_ID:\s*(\S+)", result)
-        if m:
-            state.agent_id = m.group(1)
-            print(f"  [register_agent] Registered → Agent ID: {state.agent_id}")
+        # Try JSON parse first (fresh registration: {"agentId": "..."})
+        agent_id = None
+        try:
+            data = json.loads(result)
+            agent_id = data.get("agentId") or data.get("agent_id") or data.get("id")
+        except Exception:
+            pass
+
+        # Fallback: plain-text "AGENT_ID: xxx" (returned on re-registration)
+        if not agent_id:
+            m = re.search(r"AGENT_ID[:\s]+([A-Za-z0-9_\-]+)", result)
+            if m:
+                agent_id = m.group(1).strip()
+
+        # Fallback: any "agentId":"xxx" JSON-like fragment inside a plain string
+        if not agent_id:
+            m = re.search(r'"agentId"\s*:\s*"([^"]+)"', result)
+            if m:
+                agent_id = m.group(1).strip()
+
+        if agent_id:
+            state.agent_id = agent_id
+            print(f"  [register_agent] Registered -> Agent ID: {state.agent_id}")
         else:
-            print(f"  [register_agent] Warning: no AGENT_ID found in response: {result[:200]}")
+            print(f"  [register_agent] Warning: no agentId found in response: {result[:200]}")
         return result
 
     async def get_tasks(agent_id: str) -> str:

@@ -6,12 +6,12 @@ from dotenv import load_dotenv
 # Load .env file
 load_dotenv()
 
-# ── Credentials ───────────────────────────────────────────────────────────────
+# -- Credentials ---------------------------------------------------------------
 GEMINI_API_KEY  = os.getenv("GEMINI_API_KEY")
 ARENA_ID_TOKEN  = os.getenv("ARENA_ID_TOKEN")
 MCP_ENDPOINT    = os.getenv("MCP_ENDPOINT", "https://agent-arena-623774504237.asia-southeast1.run.app/mcp")
 
-# ── Agent Identity ────────────────────────────────────────────────────────────
+# -- Agent Identity ------------------------------------------------------------
 _raw_name   = os.getenv("AGENT_NAME", "ApexAgent_v1")
 AGENT_NAME  = re.sub(r'[^a-zA-Z0-9_]', '_', _raw_name)
 if AGENT_NAME and not (AGENT_NAME[0].isalpha() or AGENT_NAME[0] == '_'):
@@ -19,7 +19,7 @@ if AGENT_NAME and not (AGENT_NAME[0].isalpha() or AGENT_NAME[0] == '_'):
 
 AGENT_STACK = os.getenv("AGENT_STACK", "Python / ADK / Gemini 2.5 Multi-Agent")
 
-# ── Multi-Model Strategy ──────────────────────────────────────────────────────
+# -- Multi-Model Strategy ------------------------------------------------------
 # Phase 1 (Classify) — cheapest model
 MODEL_CLASSIFY = os.getenv("MODEL_CLASSIFY", "gemini-2.5-flash-lite")
 # Phase 2 (Plan), Phase 5 (Critique), Phase 6 (Judge) — fast model
@@ -31,13 +31,13 @@ MODEL_SOLVE    = os.getenv("MODEL_SOLVE",    "gemini-2.5-pro")
 # Fallback / default
 MODEL          = os.getenv("MODEL",          "gemini-2.5-flash")
 
-# ── Loop Control ──────────────────────────────────────────────────────────────
+# -- Loop Control --------------------------------------------------------------
 try:
     MAX_TURNS = int(os.getenv("MAX_TURNS", "20"))
 except ValueError:
     MAX_TURNS = 20
 
-# ── Gemini 2.5 Flash pricing (approximate) ───────────────────────────────────
+# -- Gemini 2.5 Flash pricing (approximate) -----------------------------------
 # Flash:      $0.075 / 1M input,  $0.30 / 1M output
 # Flash-Lite: $0.019 / 1M input,  $0.075 / 1M output
 # Pro:        $1.25  / 1M input,  $5.00 / 1M output  (≤200k ctx)

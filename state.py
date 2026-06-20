@@ -20,7 +20,7 @@ class RunState:
         self.output_tokens   = 0
         self.estimated_cost  = 0.0
 
-    # ── Token Recording ───────────────────────────────────────────────────────
+    # -- Token Recording -------------------------------------------------------
 
     def record_tokens(self, input_tks: int, output_tks: int, model: str = "", phase: str = ""):
         """Records token usage + increments cumulative estimated cost."""
@@ -48,7 +48,7 @@ class RunState:
         else:
             self.record_tokens(0, estimated, model=model, phase=phase)
 
-    # ── Task Result Recording ─────────────────────────────────────────────────
+    # -- Task Result Recording -------------------------------------------------
 
     def record(self, level: int, title: str, score: int, levelled_up: bool):
         """Records a submitted task result and updates level progression."""
@@ -60,16 +60,16 @@ class RunState:
         self.level_history.append({
             "level": level, "task": title, "score": score, "up": levelled_up
         })
-        icon = "✓" if levelled_up else ("~" if score >= 70 else "✗")
+        icon = "[OK]" if levelled_up else ("~" if score >= 70 else "[X]")
 
         print("\n" + "=" * 55)
-        print(f"  [RunState] Task Complete: {icon} Level {level} → Score: {score}/100")
+        print(f"  [RunState] Task Complete: {icon} Level {level} -> Score: {score}/100")
         print(f"  Attempted: {self.tasks_attempted}  |  Total Score: {self.total_score}")
         print(f"  Current Level: {self.current_level}")
         self.print_cost_summary()
         print("=" * 55 + "\n")
 
-    # ── Cost Reporting ────────────────────────────────────────────────────────
+    # -- Cost Reporting --------------------------------------------------------
 
     def print_cost_summary(self):
         """Prints current total and per-phase cost breakdown."""
